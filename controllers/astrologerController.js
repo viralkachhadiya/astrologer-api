@@ -51,6 +51,7 @@ exports.verifyOTP = async (req, res) => {
 };
 
 exports.registerAstrologer = async (req, res) => {
+
     try {
         const { name,
             phoneNumber,
@@ -83,12 +84,9 @@ exports.registerAstrologer = async (req, res) => {
             instagram,
             facebook,
             youtube,
-            otherLinks,
-            interviewDate,
-            interviewTime,
-            uid } = req.body;
+            otherLinks } = req.body;
 
-        if (!uid) {
+        if (!!phoneNumber) {
 
             await db.collection('users')
                 .where('phoneNumber', '==', phoneNumber)
@@ -100,8 +98,37 @@ exports.registerAstrologer = async (req, res) => {
                             name: name,
                             phoneNumber: phoneNumber,
                             email: email,
+                            dateOfBirth: dateOfBirth,
+                            gender: gender,
+                            presentAddress: presentAddress,
+                            permanantAddress: permanantAddress,
+                            emergencyNumber: emergencyNumber,
+                            maritalStatus: maritalStatus,
+                            astrologerType: astrologerType,
+                            consultationType: consultationType,
+                            experience: experience,
+                            qualification: qualification,
+                            degree: degree,
+                            college: college,
+                            learningPlace: learningPlace,
+                            language: language,
+                            reference: reference,
+                            isWorking: isWorking,
+                            platformName: platformName,
+                            hoursToContribute: hoursToContribute,
+                            whyOnboard: whyOnboard,
+                            internationalTravel: internationalTravel,
+                            foreignClient: foreignClient,
+                            clientHandling: clientHandling,
+                            bestQuality: bestQuality,
+                            expectedEarning: expectedEarning,
+                            aboutYourself: aboutYourself,
+                            instagram: instagram,
+                            facebook: facebook,
+                            youtube: youtube,
+                            otherLinks: otherLinks,
                             type: 'astrologer',
-                            status: 'pending'
+                            status: 'under-review'
                         };
 
                         const userRef = await db.collection('users').add(updatedData)
@@ -110,7 +137,67 @@ exports.registerAstrologer = async (req, res) => {
 
                         res.status(200).json({ message: 'Registration successful', uid: uid, status: true });
                     } else {
-                        res.status(200).json({ message: 'Phone number already registered', status: false });
+                        const userRef = db.collection('users').doc(querySnapshot.docs[0].id);
+                        const userDoc = await userRef.get();
+
+                        if (!userDoc.exists) {
+                            return res.status(404).json({ error: 'User not found', status: false });
+                        }
+
+                        const updatedData = req.body;
+                        const allowedKeys = [
+                            'name',
+                            'phoneNumber',
+                            'emergencyPhoneNumber',
+                            'emergencyPerson',
+                            'emergencyRelation',
+                            'dateOfBirth',
+                            'gender',
+                            'presentAddress',
+                            'permanantAddress',
+                            'emergencyNumber',
+                            'maritalStatus',
+                            'astrologerType',
+                            'consultationType',
+                            'experience',
+                            'qualification',
+                            'degree',
+                            'college',
+                            'learningPlace',
+                            'language',
+                            'reference',
+                            'isWorking',
+                            'platformName',
+                            'hoursToContribute',
+                            'whyOnboard',
+                            'internationalTravel',
+                            'foreignClient',
+                            'clientHandling',
+                            'bestQuality',
+                            'expectedEarning',
+                            'aboutYourself',
+                            'instagram',
+                            'facebook',
+                            'youtube',
+                            'otherLinks',
+                            'status'
+                        ];
+
+                        const filteredData = Object.keys(updatedData)
+                            .filter(key => allowedKeys.includes(key))
+                            .reduce((obj, key) => {
+                                obj[key] = updatedData[key];
+                                return obj;
+                            }, {});
+
+                        const newData = {
+                            ...userDoc.data(),
+                            ...filteredData
+                        };
+
+                        await userRef.update(newData);
+
+                        res.status(200).json({ message: 'Registration successful', status: true });
                     }
                 })
 
@@ -119,52 +206,7 @@ exports.registerAstrologer = async (req, res) => {
                     res.status(404).json({ error: 'An error occured', status: false });
                 });
         } else {
-            const userRef = db.collection('users').doc(uid);
-            const userDoc = await userRef.get();
-
-            if (!userDoc.exists) {
-                return res.status(404).json({ error: 'User not found', status: false });
-            }
-
-            const updatedData = {
-                ...userDoc.data(),
-                dateOfBirth: dateOfBirth,
-                gender: gender,
-                presentAddress: presentAddress,
-                permanantAddress: permanantAddress,
-                emergencyNumber: emergencyNumber,
-                maritalStatus: maritalStatus,
-                astrologerType: astrologerType,
-                consultationType: consultationType,
-                experience: experience,
-                qualification: qualification,
-                degree: degree,
-                college: college,
-                learningPlace: learningPlace,
-                language: language,
-                reference: reference,
-                isWorking: isWorking,
-                platformName: platformName,
-                hoursToContribute: hoursToContribute,
-                whyOnboard: whyOnboard,
-                internationalTravel: internationalTravel,
-                foreignClient: foreignClient,
-                clientHandling: clientHandling,
-                bestQuality: bestQuality,
-                expectedEarning: expectedEarning,
-                aboutYourself: aboutYourself,
-                instagram: instagram,
-                facebook: facebook,
-                youtube: youtube,
-                otherLinks: otherLinks,
-                interviewDate: interviewDate,
-                interviewTime: interviewTime,
-                status: 'under-review'
-            };
-
-            await userRef.update(updatedData);
-
-            res.status(200).json({ message: 'Registration successful', status: true });
+            return res.status(400).json({ error: 'Phone number are required.', status: false });
         }
     } catch (error) {
         console.log(error)
@@ -240,7 +282,8 @@ exports.updateProfile = async (req, res) => {
             'instagram',
             'facebook',
             'youtube',
-            'otherLinks'
+            'otherLinks',
+            'status'
         ];
 
         const filteredData = Object.keys(updatedData)
@@ -318,77 +361,116 @@ exports.updatePassword = async (req, res) => {
 
 exports.login = async (req, res) => {
     try {
-        const { phoneNumber, password, otp } = req.body;
-        let uid = null;
+        const { phoneNumber, otp } = req.body;
 
-        if (!password) {
+        if (!phoneNumber || !otp) {
+            return res.status(400).json({ error: 'Phone number and OTP are required.', status: false });
+        }
+
+        const verificationCheck = await client.verify.v2.services('VA3fd85fb82579223df03ee53ef7adc2bc').verificationChecks.create({
+            to: phoneNumber,
+            code: otp
+        });
+
+        if (verificationCheck.status === 'approved') {
             await db.collection('users')
                 .where('phoneNumber', '==', phoneNumber)
                 .where('type', '==', 'astrologer')
                 .get()
                 .then((querySnapshot) => {
                     if (querySnapshot.empty) {
-                        res.status(200).json({ error: 'User not found', status: false });
+                        res.status(400).json({ error: 'User not found', status: false });
                     } else {
                         uid = querySnapshot.docs[0].id;
+                        let tokenPayload = {
+                            uid: uid
+                        }
+                        const token = jwt.sign(tokenPayload, "Secret!@#Key", { algorithm: 'HS256' });
+                        res.status(200).json({ message: 'Login successful', uid: uid, token: token, status: true });
                     }
                 })
                 .catch((error) => {
                     res.status(404).json({ error: 'Can not find user', status: false });
                 });
-
-            if (!phoneNumber || !otp) {
-                return res.status(400).json({ error: 'Phone number and OTP are required.', status: false });
-            }
-
-            const verificationCheck = await client.verify.v2.services('VA3fd85fb82579223df03ee53ef7adc2bc').verificationChecks.create({
-                to: phoneNumber,
-                code: otp
-            });
-
-            if (verificationCheck.status === 'approved') {
-
-                let tokenPayload = {
-                    uid: uid
-                }
-
-                const token = jwt.sign(tokenPayload, "Secret!@#Key", { algorithm: 'HS256' });
-                res.status(200).json({ message: 'Login successful', token: token, status: true });
-            } else {
-                res.status(400).json({ message: 'Wrong OTP', status: false });
-            }
+        } else {
+            res.status(400).json({ message: 'Wrong OTP', status: false });
         }
-
-        if (!phoneNumber || !password) {
-            return res.status(400).json({ error: 'Phone number and Password are required.', status: false });
-        }
-
-        await db.collection('users')
-            .where('phoneNumber', '==', phoneNumber)
-            .get()
-            .then(async (querySnapshot) => {
-                if (querySnapshot.empty) {
-                    res.status(200).json({ message: 'User not found', status: false });
-                } else {
-                    if (password === querySnapshot.docs[0].data().password) {
-                        uid = querySnapshot.docs[0].id;
-
-                        let tokenPayload = {
-                            uid: uid
-                        }
-
-                        const token = jwt.sign(tokenPayload, "Secret!@#Key", { algorithm: 'HS256' });
-
-                        res.status(200).json({ message: 'Login Successful', token: token, status: true });
-                    }
-                    else {
-                        res.status(200).json({ message: 'Incorrect Password', s0t0atus: false });
-                    }
-                }
-            })
     } catch (error) {
         res.status(500).json({ error: 'Login failed', status: false });
     }
+
+    // try {
+    //     const { phoneNumber, password, otp } = req.body;
+    //     let uid = null;
+
+    //     if (!password) {
+    //         await db.collection('users')
+    //             .where('phoneNumber', '==', phoneNumber)
+    //             .where('type', '==', 'astrologer')
+    //             .get()
+    //             .then((querySnapshot) => {
+    //                 if (querySnapshot.empty) {
+    //                     res.status(200).json({ error: 'User not found', status: false });
+    //                 } else {
+    //                     uid = querySnapshot.docs[0].id;
+    //                 }
+    //             })
+    //             .catch((error) => {
+    //                 res.status(404).json({ error: 'Can not find user', status: false });
+    //             });
+
+    //         if (!phoneNumber || !otp) {
+    //             return res.status(400).json({ error: 'Phone number and OTP are required.', status: false });
+    //         }
+
+    //         const verificationCheck = await client.verify.v2.services('VA3fd85fb82579223df03ee53ef7adc2bc').verificationChecks.create({
+    //             to: phoneNumber,
+    //             code: otp
+    //         });
+
+    //         if (verificationCheck.status === 'approved') {
+
+    //             let tokenPayload = {
+    //                 uid: uid
+    //             }
+
+    //             const token = jwt.sign(tokenPayload, "Secret!@#Key", { algorithm: 'HS256' });
+    //             res.status(200).json({ message: 'Login successful', token: token, status: true });
+    //         } else {
+    //             res.status(400).json({ message: 'Wrong OTP', status: false });
+    //         }
+    //     }
+
+    //     if (!phoneNumber || !password) {
+    //         return res.status(400).json({ error: 'Phone number and Password are required.', status: false });
+    //     }
+
+    //     await db.collection('users')
+    //         .where('phoneNumber', '==', phoneNumber)
+    //         .get()
+    //         .then(async (querySnapshot) => {
+    //             if (querySnapshot.empty) {
+    //                 res.status(200).json({ message: 'User not found', status: false });
+    //             } else {
+    //                 if (password === querySnapshot.docs[0].data().password) {
+    //                     uid = querySnapshot.docs[0].id;
+
+    //                     let tokenPayload = {
+    //                         uid: uid
+    //                     }
+
+    //                     const token = jwt.sign(tokenPayload, "Secret!@#Key", { algorithm: 'HS256' });
+
+    //                     res.status(200).json({ message: 'Login Successful', token: token, status: true });
+    //                 }
+    //                 else {
+    //                     res.status(200).json({ message: 'Incorrect Password', s0t0atus: false });
+    //                 }
+    //             }
+    //         })
+    // } catch (error) {
+    //     res.status(500).json({ error: 'Login failed', status: false });
+    // }
 };
 
 exports.fetchTimeslots = async (req, res) => {
