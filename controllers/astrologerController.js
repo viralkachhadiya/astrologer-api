@@ -88,7 +88,7 @@ exports.registerAstrologer = async (req, res) => {
 
         if (!!phoneNumber) {
 
-            await db.collection('users')
+            await db.collection('astrologers')
                 .where('phoneNumber', '==', phoneNumber)
                 .where('type', '==', 'astrologer')
                 .get()
@@ -131,13 +131,13 @@ exports.registerAstrologer = async (req, res) => {
                             status: 'under-review'
                         };
 
-                        const userRef = await db.collection('users').add(updatedData)
+                        const userRef = await db.collection('astrologers').add(updatedData)
 
                         let uid = userRef.id;
 
                         res.status(200).json({ message: 'Registration successful', uid: uid, status: true });
                     } else {
-                        const userRef = db.collection('users').doc(querySnapshot.docs[0].id);
+                        const userRef = db.collection('astrologers').doc(querySnapshot.docs[0].id);
                         const userDoc = await userRef.get();
 
                         if (!userDoc.exists) {
@@ -228,7 +228,7 @@ exports.viewProfile = async (req, res) => {
 
         let uid = decodedToken.uid;
 
-        const userRef = db.collection('users').doc(uid);
+        const userRef = db.collection('astrologers').doc(uid);
         const userDoc = await userRef.get();
 
         if (!userDoc.exists) {
@@ -305,7 +305,7 @@ exports.updateProfile = async (req, res) => {
 
         let uid = decodedToken.uid;
 
-        const userRef = db.collection('users').doc(uid);
+        const userRef = db.collection('astrologers').doc(uid);
         const userDoc = await userRef.get();
 
         if (!userDoc.exists) {
@@ -339,7 +339,7 @@ exports.updatePassword = async (req, res) => {
 
         let uid = decodedToken.uid;
 
-        const userRef = db.collection('users').doc(uid);
+        const userRef = db.collection('astrologers').doc(uid);
         const userDoc = await userRef.get();
 
         if (!userDoc.exists) {
@@ -373,7 +373,7 @@ exports.login = async (req, res) => {
         });
 
         if (verificationCheck.status === 'approved') {
-            await db.collection('users')
+            await db.collection('astrologers')
                 .where('phoneNumber', '==', phoneNumber)
                 .where('type', '==', 'astrologer')
                 .get()
@@ -587,7 +587,7 @@ exports.uploadImage = async (req, res) => {
                 expires: '03-01-2500',
             });
 
-            const userRef = admin.firestore().collection('users').doc(uid);
+            const userRef = admin.firestore().collection('astrologers').doc(uid);
             const userDoc = await userRef.get();
 
             if (!userDoc.exists) {
